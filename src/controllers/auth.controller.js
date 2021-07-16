@@ -179,6 +179,11 @@ export const login = async (req, res) => {
   }
 }
 
-export const token = async (req, res) => {
-  res.json('oh yeah 2!!!')
+export const getData = (req, res) => {
+  const data = req.user;
+
+  res.json({
+    error: false,
+    data
+  });
 }

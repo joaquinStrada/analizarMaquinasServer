@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { config } from '../lib/config.js'
+import { config } from '../lib/config.js';
+import { getConnection } from '../lib/database';
 
 const verifyToken = (req, res, next) => {
     const token = req.header('auth-token');
@@ -13,8 +14,8 @@ const verifyToken = (req, res, next) => {
 
     try {
         const verified = jwt.verify(token, config.jwt.tokenSecret);
-        req.user = verified;
 
+        req.user = verified;
         next();
     } catch (err) {
         return res.status(401).json({
@@ -23,3 +24,5 @@ const verifyToken = (req, res, next) => {
         }); 
     }
 }
+
+export default verifyToken;
