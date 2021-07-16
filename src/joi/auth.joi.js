@@ -5,3 +5,8 @@ export const schemaRegister = Joi.object({
   email: Joi.string().min(6).max(255).required().email(),
   pass: Joi.string().min(8).max(20).required()
 });
+
+export const schemaLogin = Joi.object({
+  email: Joi.string().min(6).max(255).required().email(),
+  pass: Joi.string().min(8).max(20).required()
+});

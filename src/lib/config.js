@@ -15,5 +15,8 @@ export const config = {
   profile: {
     imageUrlBase: `http://${process.env.HOST || 'localhost'}:${process.env.PORT || 3000}/public/profile/`,
     imageUrlDefault: `http://${process.env.HOST || 'localhost'}:${process.env.PORT || 3000}/public/profile/withoutPicture.png`
+  },
+  jwt: {
+    tokenSecret: process.env.TOKEN_SECRET
   }
 }

@@ -1,5 +1,6 @@
 import {
-  schemaRegister
+  schemaRegister,
+  schemaLogin
 } from '../joi/auth.joi.js';
 import { getConnection } from '../lib/database.js'
 import { config } from '../lib/config.js'
@@ -7,12 +8,13 @@ import moveFile from '../lib/moveFile.js';
 import { v4 as uuid } from 'uuid';
 import { join } from 'path';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
   const { fullname, email, pass } = req.body;
 
   /**
-   * validate user
+   * validate user inputs
    */
   const { error } = schemaRegister.validate({
     fullname,
@@ -29,9 +31,9 @@ export const register = async (req, res) => {
 
   try {
     /**
-     * Validate user
+     * Validate is not exist email on DB
      */
-    const [ rows ] = await getConnection().query('SELECT `email` FROM `usuarios` WHERE `email`= ?', [email]);
+    const [rows] = await getConnection().query('SELECT `email` FROM `usuarios` WHERE `email`= ?', [email]);
 
     if (rows.length > 0) {
       return res.status(400).json({
@@ -85,7 +87,7 @@ export const register = async (req, res) => {
       'imagen_url': imageUrl
     };
 
-    const [ results ] = await getConnection().query('INSERT INTO usuarios SET ?', [newUser]);
+    const [results] = await getConnection().query('INSERT INTO usuarios SET ?', [newUser]);
 
     /**
      * Return the user
@@ -101,13 +103,80 @@ export const register = async (req, res) => {
     console.error(err);
     res.status(500).json({
       error: true,
-      message: err.message || 'Ocurrio un error al intertar registrar el usuario'
+      message: err.message || 'Ocurrio un error al intentar registrar el usuario'
     });
   }
 }
 
 export const login = async (req, res) => {
-  res.json('oh yeah 2!!!')
+  const { email, pass } = req.body;
+
+  /**
+   * validate user inputs
+   */
+  const { error } = schemaLogin.validate({
+    email,
+    pass
+  });
+
+  if (error) {
+    return res.status(400).json({
+      error: true,
+      message: error.details[0].message
+    });
+  }
+
+  try {
+    /**
+     * validate email
+     */
+    const [rows] = await getConnection().query('SELECT * FROM `usuarios` WHERE `email` = ?', [email]);
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        error: true,
+        message: 'Usuario y/o contraseña incorrectos'
+      });
+    }
+
+    const userDB = rows[0];
+
+    /**
+     * validate password
+     */
+    const validPassword = await bcrypt.compare(pass, userDB.password);
+
+    if (!validPassword) {
+      return res.status(400).json({
+        error: true,
+        message: 'Usuario y/o contraseña incorrectos'
+      });
+    }
+
+    /**
+     * Create token
+     */
+    const token = jwt.sign({
+      id: userDB.id,
+      fechayhora: userDB.fechayhora,
+      nombre: userDB.nombre,
+      email: userDB.email,
+      imageUrl: userDB['imagen_url']
+    }, config.jwt.tokenSecret);
+
+    res.header('auth-token', token).json({
+      error: false,
+      data: {
+        token
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: true,
+      message: err.message || 'Ocurrio un error al intentar hacer login con el usuario'
+    })
+  }
 }
 
 export const token = async (req, res) => {
