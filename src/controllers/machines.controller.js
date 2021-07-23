@@ -40,7 +40,38 @@ export const getCountMachines = async (req, res) => {
 }
 
 export const getMachine = async (req, res) => {
-    res.json('oh yeah!!!');
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    try {
+        const [ rows ] = await getConnection().query('SELECT * FROM `maquinas` WHERE `id` = ?', [id]);
+
+        /**
+         * Validate the row
+         */
+        if (rows.length === 0) {
+            return res.status(400).json({
+                error: true,
+                message: 'El id de la maquina no existe en la base de datos'
+            });
+        } else if (rows[0]["usuario_id"] !== userId) {
+            return res.status(400).json({
+                error: true,
+                message: 'Usted no tiene acceso a visualizar esta maquina'
+            });
+        }
+
+        res.json({
+            error: false,
+            data: rows[0]
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: true,
+            message: err.message || 'Ocurrio un error al intentar obtener la maquina'
+        });
+    }
 }
 
 export const saveMachine = async (req, res) => {
