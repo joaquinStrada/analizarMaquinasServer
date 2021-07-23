@@ -2,11 +2,41 @@ import { schemaSave } from '../joi/machines.joi.js';
 import { getConnection } from '../lib/database.js';
 
 export const getMachines = async (req, res) => {
-    res.json('oh yeah!!!');
+    const { id } = req.user;
+
+    try {
+       const [ rows ] = await getConnection().query('SELECT * FROM `maquinas` WHERE `usuario_id` = ?', [id]);
+       
+       res.json({
+           error: false,
+           data: rows
+       });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: true,
+            message: err.message || 'Ocurrio un error al intentar obtener las maquinas'
+        });
+    }
 }
 
 export const getCountMachines = async (req, res) => {
-    res.json('oh yeah!!!');
+    const { id } = req.user;
+
+    try {
+        const [ rows ] = await getConnection().query('SELECT COUNT(*) FROM `maquinas` WHERE `usuario_id` = ?', [id]);
+        
+        res.json({
+            error: false,
+            data: rows[0]["COUNT(*)"]
+        })
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: true,
+            message: err.message || 'Ocurrio un error al intentar obtener la cantidad de maquinas'
+        });
+    }
 }
 
 export const getMachine = async (req, res) => {
