@@ -1,4 +1,4 @@
-import { schemaSave } from '../joi/machines.joi.js';
+import { schemaSave, schemaUpdate } from '../joi/machines.joi.js';
 import { getConnection } from '../lib/database.js';
 
 export const getMachines = async (req, res) => {
@@ -116,7 +116,7 @@ export const saveMachine = async (req, res) => {
             'usuario_id': id
         };
 
-        const [results] = await getConnection().query('INSERT INTO maquinas SET ?', saveMachine);
+        const [results] = await getConnection().query('INSERT INTO `maquinas` SET ?', saveMachine);
 
         /**
          * Response the user
@@ -139,7 +139,64 @@ export const saveMachine = async (req, res) => {
 
 export const updateMachine = async (req, res) => {
     const { id } = req.params;
+    const { name, description } = req.body;
     const userId = req.user.id;
+
+    /**
+     * Validate the inputs
+     */
+    const { error } = schemaUpdate.validate({
+        id,
+        name,
+        description,
+        userId
+    });
+
+    if (error) {
+        return res.status(400).json({
+            error: true,
+            message: error.details[0].message
+        });
+    }
+
+    try {
+        /**
+         * Validate machine id
+         */
+         const [ rows ] = await getConnection().query('SELECT * FROM `maquinas` WHERE `id` = ?', [id]);
+
+         if (rows.length === 0) {
+             return res.status(400).json({
+                 error: true,
+                 message: 'El id de la maquina no existe en la base de datos'
+             });
+         } else if (rows[0]["usuario_id"] !== userId) {
+             return res.status(400).json({
+                 error: true,
+                 message: 'Usted no tiene acceso a modificar esta maquina'
+             });
+         }
+
+         const updateMachine = {
+             nombre: name,
+             descripcion: description
+         };
+
+         await getConnection().query('UPDATE `maquinas` SET ? WHERE `id` = ?', [updateMachine, id]);
+
+         const [ getMachine ] = await getConnection().query('SELECT * FROM `maquinas` WHERE `id` = ?', [id]);
+
+         res.json({
+             error: false,
+             data: getMachine[0]
+         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: true,
+            message: err.message || 'Ocurrio un error al intentar modificar la maquina'
+        });
+    }
 }
 
 export const deleteMachine = async (req, res) => {
